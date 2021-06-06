@@ -12,13 +12,9 @@ class Tail {
 		for (var i = 0; i < segmentCount; i++) {
 			this.addSegment(segmentLength);
 		}
-
-		if (segmentCount) {
-			this.updateSegmentTargets();
-		}
 	}
 
-	setPosition() {
+	setTarget() {
 		let x = typeof arguments[0] == "object" ? arguments[0].x : arguments[0];
 		let y = typeof arguments[0] == "object" ? arguments[0].y : arguments[1];
 		this.position.x = x;
@@ -26,13 +22,21 @@ class Tail {
 	}
 
 	addSegment(segmentLength, position) {
-		position = typeof position == "number" ? position : this.segments.length;
-		let segment = new Segment(segmentLength);
-		let target;
-		if (this.segments[position]) {
-			target = this.segments[position].pointB;
-		}
-		segment.setTarget(target);
+		position = typeof position == "number" ? position : 0;
+
+		let segment = {
+			pointA: {
+				x: this.position.x,
+				y: this.position.y
+			},
+			pointB: {
+				x: this.position.x,
+				y: this.position.y
+			},
+			angle: 0,
+			length: segmentLength
+		};
+
 		this.segments.splice(position, 0, segment);
 		return segment;
 	}
@@ -41,70 +45,24 @@ class Tail {
 		return this.segments[this.segments.length - 1];
 	}
 
-	updateSegmentTargets() {
+	update() {
 		for (var i = this.segments.length - 1; i >= 0; i--) {
-			let segment = this.segments[i];
-			let target;
-			if (this.segments[i + 1]) {
-				target = this.segments[i + 1].pointB;
+			const currentSegment = this.segments[i];
+			const nextSegment = this.segments[i + 1];
+			if (nextSegment) {
+				currentSegment.pointA.x = nextSegment.pointB.x;
+				currentSegment.pointA.y = nextSegment.pointB.y;
+				currentSegment.angle = Math.atan2(currentSegment.pointA.y - currentSegment.pointB.y, currentSegment.pointA.x - currentSegment.pointB.x);
+				currentSegment.pointB.x = currentSegment.pointA.x - Math.cos(currentSegment.angle) * currentSegment.length;
+				currentSegment.pointB.y = currentSegment.pointA.y - Math.sin(currentSegment.angle) * currentSegment.length;
 			}
-			segment.setTarget(target);
-		}
 
-		if (this.segments.length) {
-			let lastSegment = this.getLastSegment();
-			lastSegment.setTarget(this.position);
-		}
-	}
-
-	update() {
-		for (let segment of this.segments) {
-			segment.update();
-		}
-
-		this.updateSegmentTargets();
-	}
-}
-
-class Segment {
-	constructor(segmentLength) {
-		this.length = segmentLength || 10;
-		this.target = null;
-
-		this.angle = 0;
-
-		this.pointA = {
-			x: 0,
-			y: 0
-		};
-
-		this.pointB = {
-			x: this.length,
-			y: 0
-		}
-	}
-
-	setTarget() {
-		let x = typeof arguments[0] == "object" ? arguments[0].x : arguments[0];
-		let y = typeof arguments[0] == "object" ? arguments[0].y : arguments[1];
-		let position = {};
-		position.x = x || 0;
-		position.y = y || 0;
-		this.target = position || null;
-	}
-
-	update() {
-		this.pointA.x = Math.cos(this.angle) * this.length;
-		this.pointA.y = Math.sin(this.angle) * this.length;
-		if (this.target) {
-			this.angle = Math.atan2(this.target.y - this.pointB.y, this.target.x - this.pointB.x);
-
-			let targetDistance = dist(this.pointB.x, this.pointB.y, this.target.x, this.target.y);
-
-			this.pointA.x = this.target.x;
-			this.pointA.y = this.target.y;
-			this.pointB.x = this.pointA.x - Math.cos(this.angle) * this.length;
-			this.pointB.y = this.pointA.y - Math.sin(this.angle) * this.length;
+			if (currentSegment == this.getLastSegment()) {
+				currentSegment.pointA = this.position;
+				currentSegment.angle = atan2(this.position.y - currentSegment.pointB.y, this.position.x - currentSegment.pointB.x)
+				currentSegment.pointB.x = currentSegment.pointA.x - Math.cos(currentSegment.angle) * currentSegment.length;
+				currentSegment.pointB.y = currentSegment.pointA.y - Math.sin(currentSegment.angle) * currentSegment.length;
+			}
 		}
 	}
 }
